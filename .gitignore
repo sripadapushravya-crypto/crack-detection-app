@@ -1,0 +1,22 @@
+# Environment
+crack_env/
+
+# Dataset
+data/
+
+# Training outputs
+runs/
+outputs/
+tta_outputs/
+
+# Models
+*.pth
+*.pt
+
+# Images
+*.jpg
+*.png
+
+# Cache
+__pycache__/
+*.pyc
