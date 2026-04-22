@@ -4,15 +4,17 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import os
-import gdown
+import urllib.request
 
 # ======================
 # CONFIG
 # ======================
 MODEL_PATH = "best_model.pth"
-MODEL_URL = "https://drive.google.com/uc?id=1vL24JliA8vJCp8xMNEguZL3stgs1Z9NH"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 IMG_SIZE = 320
+
+# 🔥 REPLACE WITH YOUR FILE ID
+MODEL_URL = "https://drive.google.com/uc?export=download&id=1vL24JliA8vJCp8xMNEguZL3stgs1Z9NH"
 
 # ======================
 # DOWNLOAD MODEL
@@ -20,12 +22,7 @@ IMG_SIZE = 320
 def download_model():
     if not os.path.exists(MODEL_PATH):
         with st.spinner("Downloading model..."):
-            gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
-
-        # sanity check
-        if not os.path.exists(MODEL_PATH):
-            st.error("Model download failed.")
-            st.stop()
+            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
 
 # ======================
 # LOAD MODEL
@@ -43,7 +40,11 @@ def load_model():
 
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
 
-    state_dict = checkpoint["model"] if isinstance(checkpoint, dict) and "model" in checkpoint else checkpoint
+    # handle both formats
+    if isinstance(checkpoint, dict) and "model" in checkpoint:
+        state_dict = checkpoint["model"]
+    else:
+        state_dict = checkpoint
 
     model.load_state_dict(state_dict)
     model.to(DEVICE)
@@ -74,7 +75,10 @@ def predict(img):
         pred = model(x)
         pred = torch.sigmoid(pred).cpu().numpy()[0, 0]
 
-    return cv2.resize(pred, (w, h))
+    # resize back to original size
+    pred = cv2.resize(pred, (w, h))
+
+    return pred
 
 # ======================
 # POSTPROCESS
@@ -107,6 +111,7 @@ def create_heatmap(prob):
 # UI
 # ======================
 st.set_page_config(page_title="Crack Detection", layout="wide")
+
 st.title("Crack Detection App")
 
 st.sidebar.header("Settings")
@@ -115,11 +120,13 @@ threshold = st.sidebar.slider("Threshold", 0.1, 0.9, 0.7, 0.05)
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
 
 if uploaded_file is not None:
+
     file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
     if img is None:
         st.error("Failed to read image")
+
     else:
         prob = predict(img)
         mask = create_mask(prob, threshold)
@@ -132,20 +139,21 @@ if uploaded_file is not None:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("Input")
+            st.subheader("Input Image")
             st.image(img, channels="BGR")
 
         with col2:
-            st.subheader("Detection")
+            st.subheader("Overlay (Detected Cracks)")
             st.image(overlay, channels="BGR")
 
-        st.subheader("Metrics")
+        st.subheader("Crack Metrics")
         st.write(f"Cracked Area: {area_pct:.2f}%")
-        st.write(f"Crack Length: {length}")
+        st.write(f"Crack Length (relative): {length}")
 
         st.subheader("Confidence Heatmap")
         st.image(heatmap, channels="BGR")
 
+        # download result
         _, buffer = cv2.imencode(".png", overlay)
         st.download_button(
             label="Download Result",
