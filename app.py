@@ -14,8 +14,8 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 IMG_SIZE = 320
 
 # 🔥 PUT YOUR REAL FILE ID HERE
-FILE_ID = "REPLACE_THIS"
-MODEL_URL = f"https://drive.google.com/uc?id={1vL24JliA8vJCp8xMNEguZL3stgs1Z9NH}"
+FILE_ID = "1vL24JliA8vJCp8xMNEguZL3stgs1Z9NH"
+MODEL_URL = f"https://drive.google.com/uc?id={FILE_ID}"
 
 # ======================
 # DOWNLOAD MODEL
